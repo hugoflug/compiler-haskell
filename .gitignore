@@ -1,0 +1,4 @@
+.stack-work/
+compiler-haskell.cabal
+*~
+.DS_Store

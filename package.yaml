@@ -1,0 +1,34 @@
+name:                compiler-haskell
+version:             0.1.0.0
+
+dependencies:
+- base >= 4.7 && < 5
+- parsec
+- containers
+- split
+- either
+
+library:
+  source-dirs: src
+
+executables:
+  compiler-haskell-exe:
+    main:                Main.hs
+    source-dirs:         app
+    dependencies:
+    - compiler-haskell
+
+tests:
+  unit-tests:
+    main:                Spec.hs
+    source-dirs:         test/unit
+    dependencies:
+    - compiler-haskell
+    - hspec
+  integration-tests:
+    main:                Spec.hs
+    source-dirs:         test/integration
+    dependencies:
+    - compiler-haskell
+    - hspec
+    - directory

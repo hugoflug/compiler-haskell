@@ -10,6 +10,7 @@ import Text.Parsec.Expr
 import Text.Parsec.Token
 import Text.Parsec.Language
 import SyntaxTree as AST
+import Data.Either.Combinators
 
 def = javaStyle{
                 opStart = oneOf "*+-><=&|"

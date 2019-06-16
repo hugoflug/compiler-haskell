@@ -2,6 +2,8 @@ import System.Directory
 import Control.Monad
 import Test.Hspec
 import Data.Either.Combinators
+import Data.Text(stripPrefix, pack, unpack)
+import Data.Maybe(fromJust)
 
 import Compile
 
@@ -19,7 +21,8 @@ getAllFiles topDir = do
     return $ concatMap (\(dir, files) -> map (format dir) files) dirsWithFiles
 
 assertResult assert filename = do 
-    specify filename $ do
+    let stripDir = unpack . fromJust . stripPrefix (pack testCaseDir) . pack
+    specify (stripDir filename) $ do
         result <- compileFromFile filename
         result `shouldSatisfy` assert
 

@@ -1,5 +1,7 @@
 module SyntaxTree where
 
+import Text.Parsec
+
 data SyntaxTreeNode = 
     Expr Expr |
     TypeNode TypeNode |
@@ -11,30 +13,30 @@ data SyntaxTreeNode =
     Program_ Program
     deriving (Show, Eq)
 
-data MethodDecl = MethodDecl { returnType :: TypeNode, name :: Expr, argList :: [GenVarDecl], returnVal :: Expr, methodDeclIndex :: Int } deriving (Show, Eq)
-data ClassDecl = ClassDecl { className :: Expr, varDecls :: [GenVarDecl], methodDecls :: [MethodDecl], classDeclIndex :: Int } deriving (Show, Eq)
-data MainClass = MainClass { mainClassName :: Identifier, stdArgsName :: Identifier, mainVarDecls :: [GenVarDecl], stmts :: [Stmt], mainClassIndex :: Int } deriving (Show, Eq)
-data Program = Program { mainClass :: MainClass, classDecls :: [ClassDecl], programIndex :: Int } deriving (Show, Eq)
+data MethodDecl = MethodDecl { returnType :: TypeNode, name :: Expr, argList :: [GenVarDecl], returnVal :: Expr, methodDeclpos :: SourcePos } deriving (Show, Eq)
+data ClassDecl = ClassDecl { className :: Expr, varDecls :: [GenVarDecl], methodDecls :: [MethodDecl], classDeclpos :: SourcePos } deriving (Show, Eq)
+data MainClass = MainClass { mainClassName :: String, stdArgsName :: String, mainVarDecls :: [GenVarDecl], stmts :: [Stmt], mainClasspos :: SourcePos } deriving (Show, Eq)
+data Program = Program { mainClass :: MainClass, classDecls :: [ClassDecl], programpos :: SourcePos } deriving (Show, Eq)
 
 data Expr = 
-    IntLit { value :: Int, index :: Int} |
+    IntLit { value :: Integer, pos :: SourcePos} |
     Identifier_ Identifier |
     BinaryOp_ BinaryOp |
-    True { index :: Int } |
-    False { index :: Int } |
-    This { index :: Int } |
-    NewArray { arraySize :: Int, index :: Int } |
-    NewObject { typeName :: Expr, index :: Int } |
-    Parens { expr :: Expr, index :: Int } |
-    ArrayLength { array :: Expr, index :: Int } |
-    MethodCall { obj :: Expr, methodName :: Expr, args :: [Expr], index :: Int } |
-    ArrayLookup { array :: Expr, arrayIndex :: Expr, index :: Int } |
-    Not { expr :: Expr, index :: Int }
+    True { pos :: SourcePos } |
+    False { pos :: SourcePos } |
+    This { pos :: SourcePos } |
+    NewArray { arraySize :: Integer, pos :: SourcePos } |
+    NewObject { typeName :: Expr, pos :: SourcePos } |
+    Parens { expr :: Expr, pos :: SourcePos } |
+    ArrayLength { array :: Expr, pos :: SourcePos } |
+    MethodCall { obj :: Expr, methodName :: String, args :: [Expr], pos :: SourcePos } |
+    ArrayLookup { array :: Expr, arrayIndex :: Expr, pos :: SourcePos } |
+    Not { expr :: Expr, pos :: SourcePos }
     deriving (Show, Eq)
 
-data Identifier = Identifier { idName :: String, idIndex :: Int } deriving (Show, Eq)
+data Identifier = Identifier { idName :: String, idpos :: SourcePos } deriving (Show, Eq)
 
-data BinaryOp = BinaryOp { op :: Op, leftOp :: Expr, rightOp :: Expr, binOpIndex :: Int } deriving (Show, Eq)
+data BinaryOp = BinaryOp { op :: Op, leftOp :: Expr, rightOp :: Expr, binOpIndex :: SourcePos } deriving (Show, Eq)
 
 data Op = 
     Mult |
@@ -51,23 +53,23 @@ data Op =
     deriving (Show, Eq)
 
 data TypeNode = 
-    BooleanTypeNode { typeNodeIndex :: Int } |
-    IntArrayTypeNode { typeNodeIndex :: Int } |
-    IntTypeNode { typeNodeIndex :: Int }|
-    ObjectTypeNode { objectName :: String, typeNodeIndex :: Int }
+    BooleanTypeNode { typeNodepos :: SourcePos } |
+    IntArrayTypeNode { typeNodepos :: SourcePos } |
+    IntTypeNode { typeNodepos :: SourcePos }|
+    ObjectTypeNode { objectName :: String, typeNodepos :: SourcePos }
     deriving (Show, Eq)
 
 data Stmt = 
-    ArrayAssign { assignArray :: Expr, assignArrayIndex :: Expr, newValue :: Expr, stmtIndex :: Int } |
-    Assign { assignee :: Expr, newValue :: Expr, stmtIndex :: Int  } |
-    Block { stmtList :: [Stmt], stmtIndex :: Int } |
-    If { ifCondition :: Expr, thenStmt :: Stmt, elseStmt :: Stmt, stmtIndex :: Int } |
-    IfWithoutElse { iweCondition :: Expr, thenStmt :: Stmt, stmtIndex :: Int } |
-    Syso { printee :: Expr, stmtIndex :: Int } |
-    While { whileCondition :: Expr, whileStmt :: Stmt, stmtIndex :: Int }
+    ArrayAssign { assignArray :: Expr, assignArrayIndex :: Expr, newValue :: Expr, stmtpos :: SourcePos } |
+    Assign { assignee :: Expr, newValue :: Expr, stmtpos :: SourcePos  } |
+    Block { stmtList :: [Stmt], stmtpos :: SourcePos } |
+    If { ifCondition :: Expr, thenStmt :: Stmt, elseStmt :: Stmt, stmtpos :: SourcePos } |
+    IfWithoutElse { iweCondition :: Expr, thenStmt :: Stmt, stmtpos :: SourcePos } |
+    Syso { printee :: Expr, stmtpos :: SourcePos } |
+    While { whileCondition :: Expr, whileStmt :: Stmt, stmtpos :: SourcePos }
     deriving (Show, Eq)
 
-data GenVarDecl = GenVarDecl { typeNode :: TypeNode, varName :: Expr, var :: VarDeclType, genVarDeclIndex :: Int } deriving (Show, Eq)
+data GenVarDecl = GenVarDecl { typeNode :: TypeNode, varName :: Expr, var :: VarDeclType, genVarDeclpos :: SourcePos } deriving (Show, Eq)
 data VarDeclType =
     VarDecl |
     Formal

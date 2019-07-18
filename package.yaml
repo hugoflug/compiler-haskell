@@ -33,3 +33,4 @@ tests:
     - compiler-haskell
     - hspec
     - directory
+    - regex-tdfa

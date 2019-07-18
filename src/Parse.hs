@@ -12,9 +12,10 @@ import Data.Maybe (isJust)
 
 def =
   javaStyle
-    { opStart = oneOf "*+-><=&,!"
-    , opLetter = oneOf "*+-><=&,!"
-    , reservedOpNames = ["+", "-", "-", "<", ">", "<=", ">=", "&&", ",,", "!"]
+    { opStart = oneOf "*+-><=&,!."
+    , opLetter = oneOf "*+-><=&,!.length"
+    , reservedOpNames =
+        ["+", "-", "-", "<", ">", "<=", ">=", "==", "!=", "&&", ",,", "!", ".length"]
     , reservedNames =
         [ "true"
         , "false"
@@ -27,6 +28,8 @@ def =
         , "static"
         , "void"
         , "class"
+        , "new"
+        , "return"
         ]
     }
 
@@ -50,7 +53,7 @@ program = do
   m_whiteSpace
   pos <- getPosition
   mainClass' <- mainClass
-  classDecls <- many classDecl
+  classDecls <- many $ try classDecl
   eof
   return $ AST.Program mainClass' classDecls pos
 
@@ -61,8 +64,9 @@ mainClass = do
   s "{" >> r "public" >> r "static" >> r "void" >> s "main" >> s "(" >> s "String" >> s "[" >> s "]"
   argName <- m_identifier
   s ")" >> s "{"
-  varDecls <- many varDecl
-  stmts <- many stmt
+  varDecls <- many $ try varDecl
+  stmts <- many $ try stmt
+  s "}" >> s "}"
   return $ AST.MainClass name argName varDecls stmts pos
 
 classDecl = do
@@ -70,8 +74,8 @@ classDecl = do
   r "class"
   name <- ident
   s "{"
-  varDecls <- many varDecl
-  methodDecls <- many methodDecl
+  varDecls <- many $ try varDecl
+  methodDecls <- many $ try methodDecl
   s "}"
   return $ AST.ClassDecl name varDecls methodDecls pos
 
@@ -82,11 +86,12 @@ methodDecl = do
   name <- ident
   formals <- m_parens $ m_commaSep formal
   s "{"
-  varDecls <- many varDecl
-  stmts <- many stmt
+  varDecls <- many $ try varDecl
+  stmts <- many $ try stmt
   r "return"
   returnVal <- expr
   s ";"
+  s "}"
   return $ AST.MethodDecl typeNode name formals varDecls stmts returnVal pos
 
 formal = do
@@ -116,7 +121,7 @@ objectType = do
   name <- m_identifier
   return $ AST.ObjectTypeNode name pos
 
-stmt = assign <|> arrayAssign <|> block <|> syso <|> while' <|> if'
+stmt = try assign <|> try arrayAssign <|> block <|> syso <|> while' <|> if'
 
 assign = do
   pos <- getPosition
@@ -132,12 +137,13 @@ arrayAssign = do
   index <- m_brackets expr
   s "="
   newValue <- expr
+  s ";"
   return $ AST.ArrayAssign assignee index newValue pos
 
 block = do
   pos <- getPosition
   s "{"
-  stmts <- many stmt
+  stmts <- many $ try stmt
   s "}"
   return $ AST.Block stmts pos
 
@@ -145,6 +151,7 @@ syso = do
   pos <- getPosition
   s "System.out.println"
   expr <- m_parens expr
+  s ";"
   return $ AST.Syso expr pos
 
 while' = do
@@ -186,7 +193,7 @@ newArray = do
   pos <- getPosition
   r "new"
   r "int"
-  size <- m_brackets m_integer
+  size <- m_brackets expr
   return $ AST.NewArray size pos
 
 newObject = do
@@ -204,9 +211,11 @@ ident = do
 table =
   [ [Prefix not']
   , [Postfix arrayLookup, Postfix (try arrayLength), Postfix (try methodCall)]
-  , [Infix and' AssocLeft, Infix or' AssocLeft]
   , [Infix mult AssocLeft]
   , [Infix plus AssocLeft, Infix minus AssocLeft]
+  , [Infix and' AssocLeft, Infix or' AssocLeft]
+  , [Infix gt AssocLeft, Infix get AssocLeft, Infix lt AssocLeft, Infix leqt AssocLeft]
+  , [Infix eq AssocLeft, Infix notEq AssocLeft]
   ]
 
 binOp op opNode = do
@@ -223,6 +232,14 @@ mult = binOp "*" AST.Mult
 eq = binOp "==" AST.Equal
 
 notEq = binOp "!=" AST.NotEqual
+
+gt = binOp ">" AST.GreaterThan
+
+get = binOp ">=" AST.GreaterOrEqualThan
+
+lt = binOp "<" AST.LessThan
+
+leqt = binOp "<=" AST.LessOrEqualThan
 
 and' = binOp "&&" AST.Equal
 

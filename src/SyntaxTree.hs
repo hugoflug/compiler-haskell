@@ -69,7 +69,7 @@ data Expr
       { pos :: SourcePos
       }
   | NewArray
-      { arraySize :: Integer
+      { arraySize :: Expr
       , pos :: SourcePos
       }
   | NewObject

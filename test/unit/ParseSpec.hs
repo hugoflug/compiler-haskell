@@ -1,11 +1,14 @@
-module ParseSpec(spec) where
+module ParseSpec
+  ( spec
+  ) where
 
-import Test.Hspec
+import Data.Either.Combinators (isRight)
 import Parse
 import SyntaxTree as AST
+import Test.Hspec
 
 spec :: Spec
 spec =
-    describe "parse" $ do
-        it "should parse simple expression correctly" $ do
-             parse "" "true + false" `shouldBe` Right (BinaryOp_ (BinaryOp Plus (AST.True 0) (AST.False 0) 0))
+  describe "parse" $ do
+    it "should parse simple expression correctly" $ do
+      parse "" "true + false" `shouldSatisfy` isRight

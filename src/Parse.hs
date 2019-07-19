@@ -1,5 +1,6 @@
 module Parse
   ( Parse.parse
+  , expr --temp
   ) where
 
 import qualified SyntaxTree as AST
@@ -11,11 +12,13 @@ import Text.Parsec.Token
 import Data.Maybe (isJust)
 
 def =
-  javaStyle
-    { opStart = oneOf "*+-><=&,!."
-    , opLetter = oneOf "*+-><=&,!.length"
-    , reservedOpNames =
-        ["+", "-", "-", "<", ">", "<=", ">=", "==", "!=", "&&", ",,", "!", ".length"]
+  emptyDef
+    { commentStart = "/*"
+    , commentEnd = "*/"
+    , commentLine = "//"
+    , nestedComments = True
+    , identStart = letter <|> oneOf "_"
+    , identLetter = alphaNum <|> oneOf "_"
     , reservedNames =
         [ "true"
         , "false"
@@ -30,12 +33,19 @@ def =
         , "class"
         , "new"
         , "return"
+        , "int"
+        , "boolean"
         ]
+    , reservedOpNames = [] --["*", "+", "-", "-", "<", ">", "<=", ">=", "==", "!=", "&&", "!", ".length"]
+    , opStart = oneOf []
+    , opLetter = oneOf []
+    , caseSensitive = True
     }
 
 TokenParser { parens = m_parens
             , identifier = m_identifier
             , reservedOp = m_reservedOp
+            , operator = m_operator
             , reserved = m_reserved
             , semiSep1 = m_semiSep1
             , whiteSpace = m_whiteSpace
@@ -110,11 +120,11 @@ varDecl = do
 type' = try intArrayType <|> booleanType <|> intType <|> objectType
 
 intArrayType =
-  getPosition >>= \pos -> s "int" >> s "[" >> s "]" >> (return $ AST.IntArrayTypeNode pos)
+  getPosition >>= \pos -> r "int" >> s "[" >> s "]" >> (return $ AST.IntArrayTypeNode pos)
 
-booleanType = getPosition >>= \pos -> s "boolean" >> (return $ AST.BooleanTypeNode pos)
+booleanType = getPosition >>= \pos -> r "boolean" >> (return $ AST.BooleanTypeNode pos)
 
-intType = getPosition >>= \pos -> s "int" >> (return $ AST.IntTypeNode pos)
+intType = getPosition >>= \pos -> r "int" >> (return $ AST.IntTypeNode pos)
 
 objectType = do
   pos <- getPosition
@@ -173,10 +183,10 @@ if' = do
       return $ AST.If cond thenStmt elseStmt pos
     else return $ AST.IfWithoutElse cond thenStmt pos
 
-expr = buildExpressionParser table term <?> "expression"
+expr = buildExpressionParser table term
 
 term =
-  m_parens expr <|> true <|> false <|> this <|> ident <|> intLit <|> try newArray <|> try newObject
+  m_parens expr <|> this <|> true <|> false <|> ident <|> intLit <|> try newArray <|> try newObject
 
 true = getPosition >>= \pos -> r "true" >> (return $ AST.True pos)
 
@@ -208,13 +218,18 @@ ident = do
   name <- m_identifier
   return $ AST.Identifier_ $ AST.Identifier name pos
 
+-- https://stackoverflow.com/a/10475767
+prefix p = Prefix . chainl1 p $ return (.)
+
+postfix p = Postfix . chainl1 p $ return (flip (.))
+
 table =
-  [ [Prefix not']
-  , [Postfix arrayLookup, Postfix (try arrayLength), Postfix (try methodCall)]
+  [ [prefix not']
+  , [postfix (arrayLookup <|> (try arrayLength) <|> (try methodCall))]
   , [Infix mult AssocLeft]
   , [Infix plus AssocLeft, Infix minus AssocLeft]
   , [Infix and' AssocLeft, Infix or' AssocLeft]
-  , [Infix gt AssocLeft, Infix get AssocLeft, Infix lt AssocLeft, Infix leqt AssocLeft]
+  , [Infix get AssocLeft, Infix gt AssocLeft, Infix leqt AssocLeft, Infix lt AssocLeft]
   , [Infix eq AssocLeft, Infix notEq AssocLeft]
   ]
 
@@ -247,7 +262,7 @@ or' = binOp "||" AST.NotEqual
 
 not' = do
   pos <- getPosition
-  r "!"
+  s "!"
   return $ \x -> AST.Not x pos
 
 arrayLength = do

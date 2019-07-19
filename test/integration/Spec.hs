@@ -1,6 +1,6 @@
 import Control.Monad
 import Data.Either.Combinators
-import Data.List (intersect, partition)
+import Data.List (intersect, isSuffixOf, partition)
 import Data.Maybe (fromJust)
 import Data.Text (find, pack, strip, stripPrefix, unpack)
 import System.Directory
@@ -36,7 +36,7 @@ getAllFiles topDir = do
   let dirsWithFiles = zip subdirs files
   let format dir file = dir ++ "/" ++ file
   let allFiles = concatMap (\(dir, files) -> map (format dir) files) dirsWithFiles
-  filterM shouldTestFile allFiles
+  filterM shouldTestFile . filter (isSuffixOf ".java") $ allFiles
 
 assertResult assert filename = do
   let stripDir = unpack . fromJust . stripPrefix (pack testCaseDir) . pack
@@ -45,5 +45,13 @@ assertResult assert filename = do
     result `shouldSatisfy` assert
 
 main = do
-  files <- getAllFiles "compile"
-  hspec $ context "Integration tests" $ mapM_ (assertResult isRight) files
+  compileFiles <- getAllFiles "compile"
+  nonCompileFiles <- getAllFiles "noncompile"
+  executeFiles <- getAllFiles "execute"
+  nonExecuteFiles <- getAllFiles "nonexecute"
+  hspec $
+    context "Integration tests" $ do
+      mapM_ (assertResult isRight) compileFiles
+      mapM_ (assertResult isRight) executeFiles
+      mapM_ (assertResult isRight) nonExecuteFiles
+      -- mapM_ (assertResult isLeft) nonCompileFiles

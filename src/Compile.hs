@@ -1,9 +1,9 @@
 module Compile
   ( compile
   , compileFromFile
+  , FileContent(FileContent)
   ) where
 
-import Data.Either.Combinators
 import Errors
 import Parse
 import SymbolTable
@@ -11,13 +11,16 @@ import SymbolTable
 import Text.Parsec (errorPos)
 import Text.Parsec.Pos (initialPos)
 
-compileFromFile :: FilePath -> IO (Either CompilationError [(FilePath, String)])
-compileFromFile filename = do
-  program <- readFile filename
-  return $ compile filename program
+data FileContent =
+  FileContent FilePath String
 
-compile :: FilePath -> String -> Either CompilationError [(FilePath, String)]
-compile filename program = do
-  program <- parse filename program
+compileFromFile :: FilePath -> IO (Either CompilationError [FileContent])
+compileFromFile filename = do
+  code <- readFile filename
+  return $ compile filename code
+
+compile :: FilePath -> String -> Either CompilationError [FileContent]
+compile filename code = do
+  program <- parse filename code
   symTable <- mkSymTable program
-  return [("", "")]
+  return [FileContent "" ""]

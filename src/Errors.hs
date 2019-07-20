@@ -3,20 +3,16 @@ module Errors where
 import Text.Parsec (SourcePos)
 
 data CompilationError =
-  CompilationError
-    { pos :: SourcePos
-    , error :: ErrorInfo
-    }
+  CompilationError SourcePos ErrorInfo
   deriving (Show, Eq)
 
+type VarName = String
+
+type Message = String
+
 data ErrorInfo
-  = RedefError
-      { name :: String
-      }
-  | ParseError
-      { message :: String
-      }
-  | RedefinitionError String
+  = RedefinitionError VarName
+  | ParseError Message
   deriving (Show, Eq)
 
 redefError varName pos = CompilationError pos $ RedefinitionError varName

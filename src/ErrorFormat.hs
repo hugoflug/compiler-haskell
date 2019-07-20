@@ -1,5 +1,5 @@
 module ErrorFormat
-  ( format
+  ( formatError
   ) where
 
 import Data.List.Split (splitOn)
@@ -8,12 +8,13 @@ import Text.Parsec (SourcePos, sourceColumn, sourceLine)
 
 import Errors
 
-format :: CompilationError -> String -> String -> String
-format (CompilationError index errorInfo) program sourceFile =
-  formatError errorInfo ++ " at " ++ formatSourcePos index program ++ " in " ++ sourceFile
+formatError :: String -> CompilationError -> String
+formatError sourceFile (CompilationError index errorInfo) =
+  formatErrorInfo errorInfo ++ " at " ++ formatSourcePos index ++ " in " ++ sourceFile
 
-formatError :: ErrorInfo -> String
-formatError (RedefError name) = "Redefinition error: " ++ name ++ " already defined"
+formatErrorInfo :: ErrorInfo -> String
+formatErrorInfo (RedefinitionError name) = "Redefinition error: " ++ name ++ " already defined"
+formatErrorInfo (ParseError message) = "Parse error: " ++ message
 
-formatSourcePos :: SourcePos -> String -> String
-formatSourcePos pos program = show (sourceLine pos) ++ ":" ++ show (sourceColumn pos)
+formatSourcePos :: SourcePos -> String
+formatSourcePos pos = show (sourceLine pos) ++ ":" ++ show (sourceColumn pos)

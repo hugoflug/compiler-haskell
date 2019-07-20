@@ -84,10 +84,9 @@ mkMethodTable (MethodDecl type' (Identifier name _) argList varDeclList _ _ _) =
   params <- dedup . mkVarMap 0 $ argList
   let paramLen = toInteger . length $ params
   locals <- dedup . mkVarMap paramLen $ varDeclList
-  --assertNoDuplicates $ M.assocs params ++ M.assocs locals
+  dedup . groupBy id $ M.keys params ++ M.keys locals
   return $ MethodTable name (typeOfNode type') params locals
 
---assertNoDuplicates = dedup . groupBy id
 mkSymTable :: Program -> Either CompilationError SymbolTable
 mkSymTable (Program mainClass classDecls _) = do
   classTables <- sequence . map mkClassTable $ classDecls

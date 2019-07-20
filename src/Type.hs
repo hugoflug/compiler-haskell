@@ -4,8 +4,6 @@ data Type
   = BooleanType
   | IntArrayType
   | IntType
-  | ObjectType
-      { name :: String
-      }
+  | ObjectType String
   | VoidType
   deriving (Show, Eq)

@@ -1,5 +1,9 @@
 module SymbolTable
   ( mkSymTable
+  , SymbolTable
+  , ClassTable(ClassTable)
+  , MethodTable(MethodTable)
+  , Var(Var)
   ) where
 
 import Data.List (find)

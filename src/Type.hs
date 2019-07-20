@@ -8,3 +8,4 @@ data Type
       { name :: String
       }
   | VoidType
+  deriving (Show, Eq)

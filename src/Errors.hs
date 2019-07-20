@@ -16,4 +16,7 @@ data ErrorInfo
   | ParseError
       { message :: String
       }
+  | RedefinitionError String
   deriving (Show, Eq)
+
+redefError varName pos = CompilationError pos $ RedefinitionError varName

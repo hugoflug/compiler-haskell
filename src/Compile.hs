@@ -6,6 +6,7 @@ module Compile
 import Data.Either.Combinators
 import Errors
 import Parse
+import SymbolTable
 
 import Text.Parsec (errorPos)
 import Text.Parsec.Pos (initialPos)
@@ -17,6 +18,6 @@ compileFromFile filename = do
 
 compile :: FilePath -> String -> Either CompilationError [(FilePath, String)]
 compile filename program = do
-  let parseResult = parse filename program
-  mapLeft (\err -> CompilationError (errorPos err) (ParseError $ show err)) $ parseResult
+  program <- parse filename program
+  symTable <- mkSymTable program
   return [("", "")]

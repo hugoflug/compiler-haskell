@@ -2,119 +2,81 @@ module SyntaxTree where
 
 import Text.Parsec
 
+type ArgDefs = [GenVarDecl]
+
+type ReturnType = TypeNode
+
+type ReturnVal = Expr
+
+type MethodName = Identifier
+
+type Method = String
+
+type ArgList = [Expr]
+
+type Size = Expr
+
+type Assignee = Identifier
+
+type Index = Expr
+
+type ClassName = Identifier
+
+type StdArgName = String
+
+type VarName = Identifier
+
+type TypeName = Identifier
+
 data SyntaxTreeNode
   = Expr Expr
   | TypeNode TypeNode
   | Stmt Stmt
-  | GenVarDecl_ GenVarDecl
-  | MethodDecl_ MethodDecl
-  | ClassDecl_ ClassDecl
-  | MainClass_ MainClass
-  | Program_ Program
+  | GenVarDecl' GenVarDecl
+  | MethodDecl' MethodDecl
+  | ClassDecl' ClassDecl
+  | MainClass' MainClass
+  | Program' Program
   deriving (Show, Eq)
 
 data MethodDecl =
-  MethodDecl
-    { returnType :: TypeNode
-    , name :: Expr
-    , argList :: [GenVarDecl]
-    , methodVarDecls :: [GenVarDecl]
-    , methodStmts :: [Stmt]
-    , returnVal :: Expr
-    , methodDeclpos :: SourcePos
-    }
+  MethodDecl ReturnType MethodName ArgDefs [GenVarDecl] [Stmt] ReturnVal SourcePos
   deriving (Show, Eq)
 
 data ClassDecl =
-  ClassDecl
-    { className :: Expr
-    , varDecls :: [GenVarDecl]
-    , methodDecls :: [MethodDecl]
-    , classDeclpos :: SourcePos
-    }
+  ClassDecl ClassName [GenVarDecl] [MethodDecl] SourcePos
   deriving (Show, Eq)
 
 data MainClass =
-  MainClass
-    { mainClassName :: String
-    , stdArgsName :: String
-    , mainVarDecls :: [GenVarDecl]
-    , stmts :: [Stmt]
-    , mainClasspos :: SourcePos
-    }
+  MainClass ClassName StdArgName [GenVarDecl] [Stmt] SourcePos
   deriving (Show, Eq)
 
 data Program =
-  Program
-    { mainClass :: MainClass
-    , classDecls :: [ClassDecl]
-    , programpos :: SourcePos
-    }
+  Program MainClass [ClassDecl] SourcePos
   deriving (Show, Eq)
 
 data Expr
-  = IntLit
-      { value :: Integer
-      , pos :: SourcePos
-      }
-  | Identifier_ Identifier
-  | BinaryOp_ BinaryOp
-  | True
-      { pos :: SourcePos
-      }
-  | False
-      { pos :: SourcePos
-      }
-  | This
-      { pos :: SourcePos
-      }
-  | NewArray
-      { arraySize :: Expr
-      , pos :: SourcePos
-      }
-  | NewObject
-      { typeName :: Expr
-      , pos :: SourcePos
-      }
-  | Parens
-      { expr :: Expr
-      , pos :: SourcePos
-      }
-  | ArrayLength
-      { array :: Expr
-      , pos :: SourcePos
-      }
-  | MethodCall
-      { obj :: Expr
-      , methodName :: String
-      , args :: [Expr]
-      , pos :: SourcePos
-      }
-  | ArrayLookup
-      { array :: Expr
-      , arrayIndex :: Expr
-      , pos :: SourcePos
-      }
-  | Not
-      { expr :: Expr
-      , pos :: SourcePos
-      }
+  = IntLit Integer SourcePos
+  | Identifier' Identifier
+  | BinaryOp' BinaryOp
+  | True SourcePos
+  | False SourcePos
+  | This SourcePos
+  | NewArray Size SourcePos
+  | NewObject TypeName SourcePos
+  | Parens Expr SourcePos
+  | ArrayLength Expr SourcePos
+  | MethodCall Expr Method ArgList SourcePos
+  | ArrayLookup Expr Index SourcePos
+  | Not Expr SourcePos
   deriving (Show, Eq)
 
 data Identifier =
-  Identifier
-    { idName :: String
-    , idpos :: SourcePos
-    }
+  Identifier String SourcePos
   deriving (Show, Eq)
 
 data BinaryOp =
-  BinaryOp
-    { op :: Op
-    , leftOp :: Expr
-    , rightOp :: Expr
-    , binOpIndex :: SourcePos
-    }
+  BinaryOp Op Expr Expr SourcePos
   deriving (Show, Eq)
 
 data Op
@@ -132,66 +94,24 @@ data Op
   deriving (Show, Eq)
 
 data TypeNode
-  = BooleanTypeNode
-      { typeNodepos :: SourcePos
-      }
-  | IntArrayTypeNode
-      { typeNodepos :: SourcePos
-      }
-  | IntTypeNode
-      { typeNodepos :: SourcePos
-      }
-  | ObjectTypeNode
-      { objectName :: String
-      , typeNodepos :: SourcePos
-      }
+  = BooleanTypeNode SourcePos
+  | IntArrayTypeNode SourcePos
+  | IntTypeNode SourcePos
+  | ObjectTypeNode String SourcePos
   deriving (Show, Eq)
 
 data Stmt
-  = ArrayAssign
-      { assignArray :: Expr
-      , assignArrayIndex :: Expr
-      , newValue :: Expr
-      , stmtpos :: SourcePos
-      }
-  | Assign
-      { assignee :: Expr
-      , newValue :: Expr
-      , stmtpos :: SourcePos
-      }
-  | Block
-      { stmtList :: [Stmt]
-      , stmtpos :: SourcePos
-      }
-  | If
-      { ifCondition :: Expr
-      , thenStmt :: Stmt
-      , elseStmt :: Stmt
-      , stmtpos :: SourcePos
-      }
-  | IfWithoutElse
-      { iweCondition :: Expr
-      , thenStmt :: Stmt
-      , stmtpos :: SourcePos
-      }
-  | Syso
-      { printee :: Expr
-      , stmtpos :: SourcePos
-      }
-  | While
-      { whileCondition :: Expr
-      , whileStmt :: Stmt
-      , stmtpos :: SourcePos
-      }
+  = ArrayAssign Assignee Index Expr SourcePos
+  | Assign Assignee Expr SourcePos
+  | Block [Stmt] SourcePos
+  | If Expr Stmt Stmt SourcePos
+  | IfWithoutElse Expr Stmt SourcePos
+  | Syso Expr SourcePos
+  | While Expr Stmt SourcePos
   deriving (Show, Eq)
 
 data GenVarDecl =
-  GenVarDecl
-    { typeNode :: TypeNode
-    , varName :: Expr
-    , var :: VarDeclType
-    , genVarDeclpos :: SourcePos
-    }
+  GenVarDecl TypeNode VarName VarDeclType SourcePos
   deriving (Show, Eq)
 
 data VarDeclType

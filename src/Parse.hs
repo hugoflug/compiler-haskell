@@ -9,7 +9,9 @@ import Text.Parsec.Expr
 import Text.Parsec.Language
 import Text.Parsec.Token
 
+import Data.Either.Combinators (mapLeft)
 import Data.Maybe (isJust)
+import Errors
 
 def =
   emptyDef
@@ -70,7 +72,7 @@ program = do
 mainClass = do
   pos <- getPosition
   r "class"
-  name <- m_identifier
+  name <- ident
   s "{" >> r "public" >> r "static" >> r "void" >> s "main" >> s "(" >> s "String" >> s "[" >> s "]"
   argName <- m_identifier
   s ")" >> s "{"
@@ -186,7 +188,8 @@ if' = do
 expr = buildExpressionParser table term
 
 term =
-  m_parens expr <|> this <|> true <|> false <|> ident <|> intLit <|> try newArray <|> try newObject
+  m_parens expr <|> this <|> true <|> false <|> identExpr <|> intLit <|> try newArray <|>
+  try newObject
 
 true = getPosition >>= \pos -> r "true" >> (return $ AST.True pos)
 
@@ -213,10 +216,12 @@ newObject = do
   s "(" >> s ")"
   return $ AST.NewObject id pos
 
+identExpr = fmap AST.Identifier' ident
+
 ident = do
   pos <- getPosition
   name <- m_identifier
-  return $ AST.Identifier_ $ AST.Identifier name pos
+  return $ AST.Identifier name pos
 
 -- https://stackoverflow.com/a/10475767
 prefix p = Prefix . chainl1 p $ return (.)
@@ -236,7 +241,7 @@ table =
 binOp op opNode = do
   pos <- getPosition
   m_reservedOp op
-  return $ \l r -> AST.BinaryOp_ $ AST.BinaryOp opNode l r pos
+  return $ \l r -> AST.BinaryOp' $ AST.BinaryOp opNode l r pos
 
 plus = binOp "+" AST.Plus
 
@@ -282,5 +287,7 @@ arrayLookup = do
   arrayIndex <- m_brackets Parse.expr
   return $ \array -> AST.ArrayLookup array arrayIndex pos
 
-parse :: SourceName -> String -> Either ParseError AST.Program
-parse = Text.Parsec.parse program
+parse :: SourceName -> String -> Either CompilationError AST.Program
+parse sourceName = toCompilationError . Text.Parsec.parse program sourceName
+  where
+    toCompilationError = mapLeft (\err -> CompilationError (errorPos err) (ParseError $ show err))

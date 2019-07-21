@@ -1,9 +1,9 @@
 module TypeCheck
   ( typeCheck
   , getType
+  , TypeError()
   ) where
 
-import Errors
 import SymbolTable
 import SyntaxTree as AST
 import Type
@@ -16,8 +16,24 @@ import Data.Maybe (fromJust)
 
 import Control.Applicative
 
+type ActualType = Type
+
+type ExpectedType = Type
+
+type ExpectedAmount = Int
+
+type ActualAmount = Int
+
+type Name = String
+
 data Context =
   Context SymbolTable ClassTable MethodTable
+
+data TypeError
+  = WrongTypeError ExpectedType ActualType
+  | UndefinedNameError Name
+  | WrongArgumentAmountError ExpectedAmount ActualAmount
+  deriving (Show, Eq)
 
 typeCheck :: SymbolTable -> Program -> Maybe TypeError
 typeCheck symTable (Program mainClass classDecls _) =

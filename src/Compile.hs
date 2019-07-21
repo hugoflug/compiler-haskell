@@ -5,8 +5,12 @@ module Compile
   ) where
 
 import Errors
-import Parse
-import SymbolTable
+import qualified Parse as P
+import qualified SymbolTable as S
+import SyntaxTree
+import qualified TypeCheck as T
+
+import Data.Either.Combinators (mapLeft, maybeToLeft)
 
 import Text.Parsec (errorPos)
 import Text.Parsec.Pos (initialPos)
@@ -24,4 +28,14 @@ compile :: FilePath -> String -> Either CompilationError [FileContent]
 compile filename code = do
   program <- parse filename code
   symTable <- mkSymTable program
+  typeCheck symTable program
   return [FileContent "" ""]
+
+parse :: FilePath -> String -> Either CompilationError Program
+parse filename = mapLeft parseError . P.parse filename
+
+mkSymTable :: Program -> Either CompilationError S.SymbolTable
+mkSymTable = mapLeft redefError . S.mkSymTable
+
+typeCheck :: S.SymbolTable -> Program -> Either CompilationError ()
+typeCheck symTable = maybeToLeft () . fmap typeError . T.typeCheck symTable

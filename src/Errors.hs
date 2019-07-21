@@ -1,7 +1,10 @@
 module Errors where
 
-import Text.Parsec (SourcePos)
-import Type
+import Text.Parsec (ParseError, SourcePos)
+import Text.Parsec.Pos (initialPos)
+
+import SymbolTable (RedefinitionError(RedefinitionError))
+import TypeCheck (TypeError())
 
 data CompilationError =
   CompilationError SourcePos ErrorInfo
@@ -11,22 +14,14 @@ type VarName = String
 
 type Message = String
 
-type ActualType = Type
-
-type ExpectedType = Type
-
-type ExpectedAmount = Int
-
-type ActualAmount = Int
-
 data ErrorInfo
-  = RedefinitionError VarName
-  | ParseError Message
+  = RedefinitionError' RedefinitionError
+  | ParseError' ParseError
+  | TypeError' TypeError
   deriving (Show, Eq)
 
-data TypeError
-  = WrongTypeError ExpectedType ActualType
-  | UndefinedNameError VarName
-  | WrongArgumentAmountError ExpectedAmount ActualAmount
+redefError err = CompilationError (initialPos "tmp") $ RedefinitionError' $ err
 
-redefError varName pos = CompilationError pos $ RedefinitionError varName
+typeError err = CompilationError (initialPos "tmp") $ TypeError' err
+
+parseError err = CompilationError (initialPos "tmp") $ ParseError' err

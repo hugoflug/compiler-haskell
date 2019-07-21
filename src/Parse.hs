@@ -1,6 +1,5 @@
 module Parse
   ( Parse.parse
-  , expr --temp
   ) where
 
 import qualified SyntaxTree as AST
@@ -287,7 +286,5 @@ arrayLookup = do
   arrayIndex <- m_brackets Parse.expr
   return $ \array -> AST.ArrayLookup array arrayIndex pos
 
-parse :: SourceName -> String -> Either CompilationError AST.Program
-parse sourceName = toCompilationError . Text.Parsec.parse program sourceName
-  where
-    toCompilationError = mapLeft (\err -> CompilationError (errorPos err) (ParseError $ show err))
+parse :: SourceName -> String -> Either ParseError AST.Program
+parse = Text.Parsec.parse program

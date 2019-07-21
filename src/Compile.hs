@@ -13,6 +13,7 @@ import Text.Parsec.Pos (initialPos)
 
 data FileContent =
   FileContent FilePath String
+  deriving (Eq, Show)
 
 compileFromFile :: FilePath -> IO (Either CompilationError [FileContent])
 compileFromFile filename = do

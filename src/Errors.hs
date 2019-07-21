@@ -15,6 +15,10 @@ type ActualType = Type
 
 type ExpectedType = Type
 
+type ExpectedAmount = Int
+
+type ActualAmount = Int
+
 data ErrorInfo
   = RedefinitionError VarName
   | ParseError Message
@@ -23,5 +27,6 @@ data ErrorInfo
 data TypeError
   = WrongTypeError ExpectedType ActualType
   | UndefinedNameError VarName
+  | WrongArgumentAmountError ExpectedAmount ActualAmount
 
 redefError varName pos = CompilationError pos $ RedefinitionError varName

@@ -54,4 +54,4 @@ main = do
       mapM_ (assertResult isRight) compileFiles
       mapM_ (assertResult isRight) executeFiles
       mapM_ (assertResult isRight) nonExecuteFiles
-      -- mapM_ (assertResult isLeft) nonCompileFiles
+      mapM_ (assertResult isLeft) nonCompileFiles

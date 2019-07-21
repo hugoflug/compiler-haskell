@@ -1,0 +1,8 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: haskell
+    steps:
+      - checkout
+      - run: stack test

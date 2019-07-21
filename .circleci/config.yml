@@ -5,4 +5,20 @@ jobs:
       - image: haskell
     steps:
       - checkout
-      - run: stack test
+      - restore_cache:
+          name: Restore Cached Dependencies
+          keys:
+            - compiler-haskell-v1-{{ checksum "stack.yaml" }}-{{ checksum "package.yaml" }}
+            - compiler-haskell-v1-{{ checksum "stack.yaml" }}
+      - run:
+          name: Resolve/Update Dependencies
+          command: stack --no-terminal setup
+      - run:
+          name: Run tests
+          command: stack --no-terminal test
+      - save_cache:
+          name: Cache Dependencies
+          key: compiler-haskell-v1-{{ checksum "stack.yaml" }}-{{ checksum "package.yaml" }}
+          paths:
+            - "/root/.stack"
+            - ".stack-work"

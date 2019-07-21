@@ -137,11 +137,13 @@ getType :: Context -> Expr -> Type
 getType _ (Not _ _) = BooleanType
 getType _ (ArrayLength _ _) = IntType
 getType _ (ArrayLookup _ _ _) = IntType
+getType c (BinaryOp' binOp) = getTypeBinOp c binOp
 getType _ (NewObject (Identifier typeName _) _) = ObjectType typeName
 getType _ (NewArray _ _) = IntArrayType
 getType c (Parens expr _) = getType c expr
 getType _ (AST.False _) = BooleanType
 getType _ (AST.True _) = BooleanType
+getType (Context _ (ClassTable className _ _) _) (This _) = ObjectType className
 getType _ (IntLit _ _) = IntType
 getType c (MethodCall obj name _ _) = methodType $ getMethodTable obj name c
   where

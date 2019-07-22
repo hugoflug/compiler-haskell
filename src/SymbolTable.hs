@@ -5,6 +5,16 @@ module SymbolTable
   , MethodTable(MethodTable)
   , Var(Var)
   , RedefinitionError(RedefinitionError)
+  , className
+  , methods
+  , fields
+  , methodName
+  , returnType
+  , params
+  , locals
+  , varName
+  , varType
+  , varNo
   ) where
 
 import Data.List (find)
@@ -29,26 +39,33 @@ type Fields = M.Map String Var
 type Name = String
 
 data ClassTable =
-  ClassTable Name Methods Fields
+  ClassTable
+    { className :: Name
+    , methods :: Methods
+    , fields :: Fields
+    }
   deriving (Show, Eq)
 
 data RedefinitionError =
   RedefinitionError Name
   deriving (Show, Eq)
 
-classTableName (ClassTable name _ _) = name
-
 data MethodTable =
-  MethodTable String Type Params Locals
+  MethodTable
+    { methodName :: Name
+    , returnType :: Type
+    , params :: Params
+    , locals :: Locals
+    }
   deriving (Show, Eq)
-
-methodTableName (MethodTable name _ _ _) = name
 
 data Var =
-  Var String Type VarNo
+  Var
+    { varName :: Name
+    , varType :: Type
+    , varNo :: VarNo
+    }
   deriving (Show, Eq)
-
-varName (Var name _ _) = name
 
 typeOfNode :: TypeNode -> Type
 typeOfNode (BooleanTypeNode _) = BooleanType
@@ -84,7 +101,7 @@ mkClassTable :: ClassDecl -> Either RedefinitionError ClassTable
 mkClassTable (ClassDecl (Identifier name _) varDecls methodDecls _) = do
   fields <- dedup . mkVarMap 0 $ varDecls
   methodTables <- sequence . map mkMethodTable $ methodDecls
-  methods <- dedup . groupBy methodTableName $ methodTables
+  methods <- dedup . groupBy methodName $ methodTables
   return $ ClassTable name methods fields
 
 mkMethodTable :: MethodDecl -> Either RedefinitionError MethodTable
@@ -99,4 +116,4 @@ mkSymTable :: Program -> Either RedefinitionError SymbolTable
 mkSymTable (Program mainClass classDecls _) = do
   classTables <- sequence . map mkClassTable $ classDecls
   mainClassTable <- mkMainClassTable mainClass
-  dedup . groupBy classTableName $ mainClassTable : classTables
+  dedup . groupBy className $ mainClassTable : classTables

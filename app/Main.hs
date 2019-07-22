@@ -1,10 +1,12 @@
 module Main where
 
-import Compile
 import Data.Either.Combinators (mapLeft)
+
+import System.Environment
+
+import Compile
 import ErrorFormat
 import Errors
-import System.Environment
 
 main :: IO ()
 main = do

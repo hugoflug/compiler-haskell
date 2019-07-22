@@ -1,6 +1,6 @@
 module SyntaxTree where
 
-import Text.Parsec
+import Text.Parsec (SourcePos)
 
 type ArgDefs = [GenVarDecl]
 

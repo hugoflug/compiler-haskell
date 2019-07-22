@@ -2,7 +2,6 @@ module Parse
   ( Parse.parse
   ) where
 
-import qualified SyntaxTree as AST
 import Text.Parsec
 import Text.Parsec.Expr
 import Text.Parsec.Language
@@ -10,7 +9,8 @@ import Text.Parsec.Token
 
 import Data.Either.Combinators (mapLeft)
 import Data.Maybe (isJust)
-import Errors
+
+import qualified SyntaxTree as AST
 
 def =
   emptyDef

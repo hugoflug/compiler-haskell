@@ -12,9 +12,6 @@ import qualified TypeCheck as T
 
 import Data.Either.Combinators (mapLeft, maybeToLeft)
 
-import Text.Parsec (errorPos)
-import Text.Parsec.Pos (initialPos)
-
 data FileContent =
   FileContent FilePath String
   deriving (Eq, Show)
@@ -32,10 +29,10 @@ compile filename code = do
   return [FileContent "" ""]
 
 parse :: FilePath -> String -> Either CompilationError Program
-parse filename = mapLeft parseError . P.parse filename
+parse filename = mapLeft ParseError' . P.parse filename
 
 mkSymTable :: Program -> Either CompilationError S.SymbolTable
-mkSymTable = mapLeft redefError . S.mkSymTable
+mkSymTable = mapLeft RedefinitionError' . S.mkSymTable
 
 typeCheck :: S.SymbolTable -> Program -> Either CompilationError ()
-typeCheck symTable = maybeToLeft () . fmap typeError . T.typeCheck symTable
+typeCheck symTable = maybeToLeft () . fmap TypeError' . T.typeCheck symTable

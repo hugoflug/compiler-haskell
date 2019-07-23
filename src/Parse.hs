@@ -7,7 +7,6 @@ import Text.Parsec.Expr
 import Text.Parsec.Language
 import Text.Parsec.Token
 
-import Data.Either.Combinators (mapLeft)
 import Data.Maybe (isJust)
 
 import qualified SyntaxTree as AST
@@ -46,7 +45,6 @@ def =
 TokenParser { parens = m_parens
             , identifier = m_identifier
             , reservedOp = m_reservedOp
-            , operator = m_operator
             , reserved = m_reserved
             , semiSep1 = m_semiSep1
             , whiteSpace = m_whiteSpace
@@ -240,7 +238,7 @@ table =
 binOp op opNode = do
   pos <- getPosition
   m_reservedOp op
-  return $ \l r -> AST.BinaryOp' $ AST.BinaryOp opNode l r pos
+  return $ \l r -> AST.BinaryOp opNode l r pos
 
 plus = binOp "+" AST.Plus
 
@@ -277,7 +275,7 @@ arrayLength = do
 methodCall = do
   pos <- getPosition
   s "."
-  methodName <- m_identifier
+  methodName <- ident
   args <- m_parens $ m_commaSep Parse.expr
   return $ \obj -> AST.MethodCall obj methodName args pos
 

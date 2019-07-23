@@ -15,11 +15,12 @@ module SymbolTable
   , varName
   , varType
   , varNo
+  , errorPos
   ) where
 
 import Data.List (find)
 import qualified Data.Map as M
-import Text.Parsec.Pos (initialPos)
+import Text.Parsec.Pos (SourcePos, initialPos)
 
 import SyntaxTree
 import Type
@@ -43,12 +44,16 @@ data ClassTable =
     { className :: Name
     , methods :: Methods
     , fields :: Fields
+    , classPos :: SourcePos
     }
   deriving (Show, Eq)
 
 data RedefinitionError =
-  RedefinitionError Name
+  RedefinitionError Name SourcePos
   deriving (Show, Eq)
+
+errorPos :: RedefinitionError -> SourcePos
+errorPos (RedefinitionError _ pos) = pos
 
 data MethodTable =
   MethodTable
@@ -56,6 +61,7 @@ data MethodTable =
     , returnType :: Type
     , params :: Params
     , locals :: Locals
+    , methodPos :: SourcePos
     }
   deriving (Show, Eq)
 
@@ -64,6 +70,7 @@ data Var =
     { varName :: Name
     , varType :: Type
     , varNo :: VarNo
+    , varPos :: SourcePos
     }
   deriving (Show, Eq)
 
@@ -78,42 +85,52 @@ groupBy key as = M.fromListWith (++) as'
   where
     as' = fmap ((,) <$> key <*> (: [])) as
 
-dedup :: Show k => M.Map k [v] -> Either RedefinitionError (M.Map k v)
-dedup m = maybe (removeDups m) toError . find (\(_, l) -> length l > 1) . M.assocs $ m
+dedup :: Show k => (v -> SourcePos) -> M.Map k [v] -> Either RedefinitionError (M.Map k v)
+dedup getPos m = maybe (removeDups m) toError . find (\(_, l) -> length l > 1) . M.assocs $ m
   where
-    removeDups m = Right $ fmap head m
-    toError (k, _) = Left $ RedefinitionError (show k)
+    removeDups m = Right . fmap head $ m
+    toError (k, val) = Left . RedefinitionError (show k) . getPos . head $ val
+
+dedupVars :: M.Map Name [Var] -> Either RedefinitionError (M.Map Name Var)
+dedupVars = dedup varPos
+
+dedupClasses :: M.Map Name [ClassTable] -> Either RedefinitionError (M.Map Name ClassTable)
+dedupClasses = dedup classPos
+
+dedupMethods :: M.Map Name [MethodTable] -> Either RedefinitionError (M.Map Name MethodTable)
+dedupMethods = dedup methodPos
 
 mkVar :: (Integer, GenVarDecl) -> Var
-mkVar (index, (GenVarDecl typeNode (Identifier varName _) _ _)) =
-  Var varName (typeOfNode typeNode) index
+mkVar (index, (GenVarDecl typeNode (Identifier varName pos) _ _)) =
+  Var varName (typeOfNode typeNode) index pos
 
 mkVarMap :: Integer -> [GenVarDecl] -> M.Map String [Var]
 mkVarMap index = groupBy varName . fmap mkVar . zip [index ..]
 
+-- TODO: Set the actual position of the main method
 mkMainClassTable :: MainClass -> Either RedefinitionError ClassTable
-mkMainClassTable (MainClass (Identifier name _) _ varDecls _ _) = do
-  varDecls <- dedup . mkVarMap 0 $ varDecls
-  let methods = M.fromList [("main", (MethodTable "main" VoidType M.empty varDecls))]
-  return $ ClassTable name methods M.empty
+mkMainClassTable (MainClass (Identifier name pos) _ varDecls _ _) = do
+  varDecls <- dedupVars . mkVarMap 0 $ varDecls
+  let methods = M.fromList [("main", (MethodTable "main" VoidType M.empty varDecls pos))]
+  return $ ClassTable name methods M.empty pos
 
 mkClassTable :: ClassDecl -> Either RedefinitionError ClassTable
-mkClassTable (ClassDecl (Identifier name _) varDecls methodDecls _) = do
-  fields <- dedup . mkVarMap 0 $ varDecls
+mkClassTable (ClassDecl (Identifier name pos) varDecls methodDecls _) = do
+  fields <- dedupVars . mkVarMap 0 $ varDecls
   methodTables <- sequence . map mkMethodTable $ methodDecls
-  methods <- dedup . groupBy methodName $ methodTables
-  return $ ClassTable name methods fields
+  methods <- dedupMethods . groupBy methodName $ methodTables
+  return $ ClassTable name methods fields pos
 
 mkMethodTable :: MethodDecl -> Either RedefinitionError MethodTable
-mkMethodTable (MethodDecl type' (Identifier name _) argList varDeclList _ _ _) = do
-  params <- dedup . mkVarMap 0 $ argList
+mkMethodTable (MethodDecl type' (Identifier name pos) argList varDeclList _ _ _) = do
+  params <- dedupVars . mkVarMap 0 $ argList
   let paramLen = toInteger . length $ params
-  locals <- dedup . mkVarMap paramLen $ varDeclList
-  dedup . groupBy id $ M.keys params ++ M.keys locals
-  return $ MethodTable name (typeOfNode type') params locals
+  locals <- dedupVars . mkVarMap paramLen $ varDeclList
+  dedupVars . groupBy varName $ M.elems params ++ M.elems locals
+  return $ MethodTable name (typeOfNode type') params locals pos
 
 mkSymTable :: Program -> Either RedefinitionError SymbolTable
 mkSymTable (Program mainClass classDecls _) = do
   classTables <- sequence . map mkClassTable $ classDecls
   mainClassTable <- mkMainClassTable mainClass
-  dedup . groupBy className $ mainClassTable : classTables
+  dedupClasses . groupBy className $ mainClassTable : classTables

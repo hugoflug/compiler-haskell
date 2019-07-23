@@ -1,6 +1,13 @@
 name:                compiler-haskell
 version:             0.1.0.0
 
+ghc-options: 
+- -Wall
+- -fno-warn-name-shadowing
+- -fno-warn-missing-signatures 
+- -fno-warn-unused-do-bind 
+- -Werror=incomplete-patterns
+
 dependencies:
 - base >= 4.7 && < 5
 - parsec

@@ -1,27 +1,21 @@
 module Errors where
 
-import Text.Parsec (ParseError, SourcePos)
-import Text.Parsec.Pos (initialPos)
+import Text.Parsec (ParseError, SourcePos, errorPos)
 
-import SymbolTable (RedefinitionError(RedefinitionError))
-import TypeCheck (TypeError())
-
-data CompilationError =
-  CompilationError SourcePos ErrorInfo
-  deriving (Show, Eq)
+import SymbolTable (RedefinitionError(), errorPos)
+import TypeCheck (TypeError(), errorPos)
 
 type VarName = String
 
 type Message = String
 
-data ErrorInfo
+data CompilationError
   = RedefinitionError' RedefinitionError
   | ParseError' ParseError
   | TypeError' TypeError
   deriving (Show, Eq)
 
-redefError err = CompilationError (initialPos "tmp") $ RedefinitionError' $ err
-
-typeError err = CompilationError (initialPos "tmp") $ TypeError' err
-
-parseError err = CompilationError (initialPos "tmp") $ ParseError' err
+errorPos :: CompilationError -> SourcePos
+errorPos (RedefinitionError' redefError) = SymbolTable.errorPos redefError
+errorPos (ParseError' parseErr) = Text.Parsec.errorPos parseErr
+errorPos (TypeError' typeErr) = TypeCheck.errorPos typeErr

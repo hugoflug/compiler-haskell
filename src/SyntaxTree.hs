@@ -28,17 +28,6 @@ type VarName = Identifier
 
 type TypeName = Identifier
 
-data SyntaxTreeNode
-  = Expr Expr
-  | TypeNode TypeNode
-  | Stmt Stmt
-  | GenVarDecl' GenVarDecl
-  | MethodDecl' MethodDecl
-  | ClassDecl' ClassDecl
-  | MainClass' MainClass
-  | Program' Program
-  deriving (Show, Eq)
-
 data MethodDecl =
   MethodDecl ReturnType MethodName ArgDefs [GenVarDecl] [Stmt] ReturnVal SourcePos
   deriving (Show, Eq)
@@ -58,7 +47,7 @@ data Program =
 data Expr
   = IntLit Integer SourcePos
   | Identifier' Identifier
-  | BinaryOp' BinaryOp
+  | BinaryOp Op Expr Expr SourcePos
   | True SourcePos
   | False SourcePos
   | This SourcePos
@@ -66,17 +55,28 @@ data Expr
   | NewObject TypeName SourcePos
   | Parens Expr SourcePos
   | ArrayLength Expr SourcePos
-  | MethodCall Expr Method ArgList SourcePos
+  | MethodCall Expr Identifier ArgList SourcePos
   | ArrayLookup Expr Index SourcePos
   | Not Expr SourcePos
   deriving (Show, Eq)
 
+exprPos :: Expr -> SourcePos
+exprPos (IntLit _ pos) = pos
+exprPos (Identifier' (Identifier _ pos)) = pos
+exprPos (BinaryOp _ _ _ pos) = pos
+exprPos (SyntaxTree.True pos) = pos
+exprPos (SyntaxTree.False pos) = pos
+exprPos (This pos) = pos
+exprPos (NewArray _ pos) = pos
+exprPos (NewObject _ pos) = pos
+exprPos (Parens _ pos) = pos
+exprPos (ArrayLength _ pos) = pos
+exprPos (MethodCall _ _ _ pos) = pos
+exprPos (ArrayLookup _ _ pos) = pos
+exprPos (Not _ pos) = pos
+
 data Identifier =
   Identifier String SourcePos
-  deriving (Show, Eq)
-
-data BinaryOp =
-  BinaryOp Op Expr Expr SourcePos
   deriving (Show, Eq)
 
 data Op

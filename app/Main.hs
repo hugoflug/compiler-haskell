@@ -1,12 +1,9 @@
 module Main where
 
-import Data.Either.Combinators (mapLeft)
-
 import System.Environment
 
 import Compile
 import ErrorFormat
-import Errors
 
 main :: IO ()
 main = do
@@ -24,7 +21,7 @@ zipLeft :: [a] -> [Either l r] -> [Either (a, l) r]
 zipLeft l1 l2 = map intoLeft $ zip l1 l2
   where
     intoLeft (a, Left b) = Left (a, b)
-    intoLeft (a, Right x) = Right x
+    intoLeft (_, Right x) = Right x
 
 writeFileContent :: FileContent -> IO ()
 writeFileContent (FileContent filePath content) = writeFile filePath content

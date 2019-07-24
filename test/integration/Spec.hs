@@ -14,33 +14,39 @@ testCaseDir = "test/integration/testcases/"
 
 extensions = ["JVM", "IWE", "CLE", "CGT", "CGE", "CEQ", "CNE", "BDJ"]
 
-sStrip = unpack . strip . pack
+strip' :: String -> String
+strip' = unpack . strip . pack
+
+mapFst :: Functor f => (a -> b) -> (f a, x) -> (f b, x)
+mapFst f (a, b) = (fmap f a, b)
 
 shouldSkip :: String -> Bool
 shouldSkip program = unsupportedExt || incompatibleExt
   where
     unsupportedExt = length (intersect requiredExts extensions) < length requiredExts
-    incompatibleExt = not $ null $ intersect (fmap tail forbiddenExts) extensions
-    (forbiddenExts, requiredExts) = partition (elem '!') . map sStrip $ extInfos
-    extInfos = map (\l -> l !! 2) $ program =~ "(^|\n)// *EXT:(.*)"
+    incompatibleExt = not . null . intersect forbiddenExts $ extensions
+    (forbiddenExts, requiredExts) =
+      mapFst tail . partition (elem '!') . map strip' . map (\l -> l !! 2) $
+      program =~ "(^|\n)// *EXT:(.*)"
 
 shouldTestFile :: FilePath -> IO Bool
-shouldTestFile filename = readFile filename >>= \contents -> return $ not $ shouldSkip contents
+shouldTestFile filename = readFile filename >>= return . not . shouldSkip
+
+listDir :: FilePath -> IO [FilePath]
+listDir dir = fmap (map (\file -> dir ++ "/" ++ file)) . listDirectory $ dir
 
 getAllFiles :: String -> IO [FilePath]
 getAllFiles topDir = do
-  let activeDir = testCaseDir ++ topDir
-  entries <- listDirectory activeDir
-  subdirs <- filterM doesDirectoryExist . map (\a -> activeDir ++ "/" ++ a) $ entries
-  files <- mapM listDirectory $ subdirs
-  let dirsWithFiles = zip subdirs files
-  let format dir file = dir ++ "/" ++ file
-  let allFiles = concatMap (\(dir, files) -> map (format dir) files) dirsWithFiles
-  filterM shouldTestFile . filter (isSuffixOf ".java") $ allFiles
+  entries <- listDir $ testCaseDir ++ topDir
+  subdirs <- filterM doesDirectoryExist entries
+  files <- fmap concat . mapM listDir $ subdirs
+  filterM shouldTestFile . filter (isSuffixOf ".java") $ files
+
+stripPrefix' :: String -> String -> String
+stripPrefix' prefix = unpack . fromJust . stripPrefix (pack prefix) . pack
 
 assertResult assert filename = do
-  let stripDir = unpack . fromJust . stripPrefix (pack testCaseDir) . pack
-  specify (stripDir filename) $ do
+  specify (stripPrefix' testCaseDir filename) $ do
     result <- compileFromFile filename
     result `shouldSatisfy` assert
 

@@ -20,7 +20,7 @@ module SymbolTable
 
 import Data.List (find)
 import qualified Data.Map as M
-import Text.Parsec.Pos (SourcePos, initialPos)
+import Text.Parsec.Pos (SourcePos)
 
 import SyntaxTree
 import Type

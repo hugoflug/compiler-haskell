@@ -7,7 +7,7 @@ import Text.Parsec.Expr
 import Text.Parsec.Language
 import Text.Parsec.Token
 
-import Data.Char (digitToInt, isAlpha, isAlphaNum, isAscii, isDigit)
+import Data.Char (isAlpha, isAlphaNum, isAscii, isDigit)
 import Data.Maybe (isJust)
 
 import qualified SyntaxTree as AST

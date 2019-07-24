@@ -20,7 +20,7 @@ library:
   source-dirs: src
 
 executables:
-  compiler-haskell-exe:
+  mjc:
     main:                Main.hs
     source-dirs:         app
     dependencies:

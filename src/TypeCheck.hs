@@ -10,7 +10,7 @@ import SyntaxTree as AST
 import Type
 
 import Data.Either.Combinators (leftToMaybe, mapRight, maybeToLeft, maybeToRight)
-import Data.List (find)
+import Data.List (find, sortOn)
 import Data.Map as M ((!), (!?), elems, lookup, member)
 
 import Text.Parsec (SourcePos)
@@ -35,6 +35,8 @@ data TypeError
   | UndefinedNameError Name SourcePos
   | WrongArgumentAmountError ExpectedAmount ActualAmount SourcePos
   | NotObjectTypeError ActualType SourcePos
+  | MultiDimArrayError SourcePos
+  | IntSizeError Integer SourcePos
   deriving (Show, Eq)
 
 errorPos :: TypeError -> SourcePos
@@ -42,6 +44,8 @@ errorPos (WrongTypeError _ _ pos) = pos
 errorPos (UndefinedNameError _ pos) = pos
 errorPos (WrongArgumentAmountError _ _ pos) = pos
 errorPos (NotObjectTypeError _ pos) = pos
+errorPos (MultiDimArrayError pos) = pos
+errorPos (IntSizeError _ pos) = pos
 
 typeCheck :: SymbolTable -> Program -> Maybe TypeError
 typeCheck symTable (Program mainClass classDecls _) = leftToMaybe result
@@ -93,6 +97,7 @@ typeCheckStmt c (If cond then' else' _) = do
 typeCheckStmt c (IfWithoutElse cond then' _) = do
   cond `hasType` BooleanType $ c
   typeCheckStmt c then'
+-- TODO: type check expr
 typeCheckStmt c (Syso expr _) = mapRight (const ()) $ typeCheckExpr c expr
 typeCheckStmt c (While cond stmt _) = do
   cond `hasType` BooleanType $ c
@@ -109,14 +114,20 @@ typeCheckExpr c e = mapRight (const ()) $ getType c e
 
 getType :: Context -> Expr -> Either TypeError Type
 getType c (BinaryOp op l r _) = getTypeBinOp c op l r
-getType c (Not expr _) = getType c expr
+getType c (Not expr _) = do
+  expr `hasType` BooleanType $ c
+  return BooleanType
 getType c (ArrayLength array _) = do
   array `hasType` IntArrayType $ c
   return IntType
 getType c (ArrayLookup array index _) = do
   array `hasType` IntArrayType $ c
   index `hasType` IntType $ c
+  assertNotMultiDimArray array
   return IntType
+  where
+    assertNotMultiDimArray (NewArray _ pos) = Left $ MultiDimArrayError pos
+    assertNotMultiDimArray _ = Right ()
 getType _ (NewObject (Identifier typeName _) _) = Right $ ObjectType typeName
 getType c (NewArray size _) = do
   size `hasType` IntType $ c
@@ -124,7 +135,12 @@ getType c (NewArray size _) = do
 getType c (Parens expr _) = getType c expr
 getType _ (AST.False _) = Right BooleanType
 getType _ (AST.True _) = Right BooleanType
-getType _ (IntLit _ _) = Right IntType
+getType _ (IntLit value pos) =
+  if value > maxInt
+    then Left $ IntSizeError value pos
+    else Right IntType
+  where
+    maxInt = 2147483648
 getType (Context symTable (ClassTable name _ _ _) _) (This _) =
   Right $ ObjectType . className . (!) symTable $ name
 getType (Context _ classTable methodTable) (Identifier' (Identifier name pos)) =
@@ -132,7 +148,7 @@ getType (Context _ classTable methodTable) (Identifier' (Identifier name pos)) =
 getType c (MethodCall obj name args pos) = do
   actualArgTypes <- mapM (getType c) args
   methodTable <- getMethodTable obj name c
-  let expectedArgTypes = map varType . elems . params $ methodTable
+  let expectedArgTypes = map varType . sortOn varNo . elems . params $ methodTable
   assertTypeListEq expectedArgTypes actualArgTypes pos
   return $ returnType methodTable
 
@@ -179,7 +195,7 @@ getMethodTable obj (Identifier methodName methodPos) c@(Context symTable _ _) = 
 
 getVar :: ClassTable -> MethodTable -> String -> Maybe Var
 getVar (ClassTable _ _ fields _) (MethodTable _ _ params locals _) name =
-  fields !? name <|> params !? name <|> locals !? name
+  locals !? name <|> params !? name <|> fields !? name
 
 hasType :: Expr -> Type -> Context -> Either TypeError ()
 hasType expr type' context = do

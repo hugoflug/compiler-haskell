@@ -2,7 +2,7 @@ import Control.Monad
 import Data.Either.Combinators
 import Data.List (intersect, isSuffixOf, partition)
 import Data.Maybe (fromJust)
-import Data.Text (find, pack, strip, stripPrefix, unpack)
+import Data.Text (pack, strip, stripPrefix, unpack)
 import System.Directory
 import Test.Hspec
 
@@ -20,7 +20,7 @@ shouldSkip :: String -> Bool
 shouldSkip program = unsupportedExt || incompatibleExt
   where
     unsupportedExt = length (intersect requiredExts extensions) < length requiredExts
-    incompatibleExt = not $ null $ intersect forbiddenExts extensions
+    incompatibleExt = not $ null $ intersect (fmap tail forbiddenExts) extensions
     (forbiddenExts, requiredExts) = partition (elem '!') . map sStrip $ extInfos
     extInfos = map (\l -> l !! 2) $ program =~ "(^|\n)// *EXT:(.*)"
 

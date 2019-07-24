@@ -7,18 +7,23 @@ import Text.Parsec.Expr
 import Text.Parsec.Language
 import Text.Parsec.Token
 
+import Data.Char (digitToInt, isAlpha, isAlphaNum, isAscii, isDigit)
 import Data.Maybe (isJust)
 
 import qualified SyntaxTree as AST
+
+asciiAlphaNum = satisfy (\c -> isAlphaNum c && isAscii c)
+
+asciiLetter = satisfy (\c -> isAlpha c && isAscii c)
 
 def =
   emptyDef
     { commentStart = "/*"
     , commentEnd = "*/"
     , commentLine = "//"
-    , nestedComments = True
-    , identStart = letter <|> oneOf "_"
-    , identLetter = alphaNum <|> oneOf "_"
+    , nestedComments = False
+    , identStart = asciiLetter <|> char '_'
+    , identLetter = asciiAlphaNum <|> char '_'
     , reservedNames =
         [ "true"
         , "false"
@@ -35,6 +40,7 @@ def =
         , "return"
         , "int"
         , "boolean"
+        , "String"
         ]
     , reservedOpNames = [] --["*", "+", "-", "-", "<", ">", "<=", ">=", "==", "!=", "&&", "!", ".length"]
     , opStart = oneOf []
@@ -46,12 +52,11 @@ TokenParser { parens = m_parens
             , identifier = m_identifier
             , reservedOp = m_reservedOp
             , reserved = m_reserved
-            , semiSep1 = m_semiSep1
             , whiteSpace = m_whiteSpace
-            , integer = m_integer
             , brackets = m_brackets
             , symbol = m_symbol
             , commaSep = m_commaSep
+            , lexeme = m_lexeme
             } = makeTokenParser def
 
 r = m_reserved
@@ -159,21 +164,21 @@ block = do
 syso = do
   pos <- getPosition
   s "System.out.println"
-  expr <- m_parens expr
+  expr <- parens' expr
   s ";"
   return $ AST.Syso expr pos
 
 while' = do
   pos <- getPosition
   r "while"
-  cond <- m_parens expr
+  cond <- parens' expr
   statement <- stmt
   return $ AST.While cond statement pos
 
 if' = do
   pos <- getPosition
   r "if"
-  cond <- m_parens expr
+  cond <- parens' expr
   thenStmt <- stmt
   maybeElse <- optionMaybe $ r "else"
   if isJust maybeElse
@@ -185,7 +190,7 @@ if' = do
 expr = buildExpressionParser table term
 
 term =
-  m_parens expr <|> this <|> true <|> false <|> identExpr <|> intLit <|> try newArray <|>
+  parens' expr <|> this <|> true <|> false <|> identExpr <|> intLit <|> try newArray <|>
   try newObject
 
 true = getPosition >>= \pos -> r "true" >> (return $ AST.True pos)
@@ -194,9 +199,25 @@ false = getPosition >>= \pos -> r "false" >> (return $ AST.False pos)
 
 this = getPosition >>= \pos -> r "this" >> (return $ AST.This pos)
 
+parens' e = do
+  pos <- getPosition
+  ex <- m_parens e
+  return $ AST.Parens ex pos
+
+nonzeroDigit = oneOf "123456789"
+
+zero = char '0' >> return 0
+
+nonzero = do
+  digit1 <- nonzeroDigit
+  restDigits <- many $ (satisfy isDigit)
+  return . read $ digit1 : restDigits
+
+number = m_lexeme (zero <|> nonzero)
+
 intLit = do
   pos <- getPosition
-  value <- m_integer
+  value <- number
   return $ AST.IntLit value pos
 
 newArray = do
@@ -226,13 +247,14 @@ prefix p = Prefix . chainl1 p $ return (.)
 postfix p = Postfix . chainl1 p $ return (flip (.))
 
 table =
-  [ [prefix not']
-  , [postfix (arrayLookup <|> (try arrayLength) <|> (try methodCall))]
+  [ [postfix (arrayLookup <|> (try arrayLength) <|> (try methodCall))]
+  , [prefix not']
   , [Infix mult AssocLeft]
   , [Infix plus AssocLeft, Infix minus AssocLeft]
-  , [Infix and' AssocLeft, Infix or' AssocLeft]
   , [Infix get AssocLeft, Infix gt AssocLeft, Infix leqt AssocLeft, Infix lt AssocLeft]
   , [Infix eq AssocLeft, Infix notEq AssocLeft]
+  , [Infix and' AssocLeft]
+  , [Infix or' AssocLeft]
   ]
 
 binOp op opNode = do

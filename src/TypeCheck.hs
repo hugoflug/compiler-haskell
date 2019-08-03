@@ -3,6 +3,7 @@ module TypeCheck
   , getType
   , TypeError(..)
   , TypeCheck.errorPos
+  , typeOfNode
   ) where
 
 import SymbolTable
